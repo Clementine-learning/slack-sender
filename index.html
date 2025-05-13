@@ -134,7 +134,64 @@
       resize: vertical;
     }
     
-    /* Checkboxes container */
+    /* Agent search styling */
+    .select-container {
+      position: relative;
+      margin-bottom: 10px;
+    }
+    
+    #agentSearch {
+      width: 100%;
+      padding: 12px 15px;
+      border: 1px solid var(--border-color);
+      border-radius: 6px;
+      font-size: 16px;
+      box-sizing: border-box;
+      background-color: var(--input-bg);
+      color: var(--text-color);
+      margin-bottom: 8px;
+    }
+    
+    /* Hide the actual select but keep it in the DOM for form submission */
+    #agentName {
+      position: absolute;
+      opacity: 0;
+      height: 0;
+      width: 0;
+      pointer-events: none;
+    }
+    
+    /* Agent dropdown list */
+    .agent-dropdown {
+      display: none;
+      position: absolute;
+      z-index: 100;
+      width: 100%;
+      max-height: 200px;
+      overflow-y: auto;
+      background-color: var(--input-bg);
+      border: 1px solid var(--border-color);
+      border-radius: 6px;
+      box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+    }
+    
+    .agent-dropdown.show {
+      display: block;
+    }
+    
+    .agent-option {
+      padding: 10px 15px;
+      cursor: pointer;
+      color: var(--text-color);
+    }
+    
+    .agent-option:hover,
+    .agent-option.highlighted {
+      background-color: var(--primary-color);
+      color: white;
+    }
+    
+    /* Team options for mentions */
     .team-options {
       margin-top: 12px;
       display: grid;
@@ -142,7 +199,7 @@
       gap: 12px;
     }
     
-    /* Individual checkbox option */
+    /* Individual team option */
     .team-option {
       display: flex;
       align-items: flex-start;
@@ -168,6 +225,14 @@
       color: var(--text-color);
       opacity: 0.7;
       margin-top: 2px;
+    }
+    
+    /* Channel options for sending */
+    .channel-options {
+      margin-top: 12px;
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
     }
     
     /* Button */
@@ -389,6 +454,7 @@
     let CONFIG = {
       apiUrl: null,
       initialized: false,
+      agents: [],
       teamConfig: []
     };
     
@@ -452,6 +518,399 @@
                 if (teamsData.teams && Array.isArray(teamsData.teams)) {
                   CONFIG.teamConfig = teamsData.teams;
                   console.log(`Loaded ${teamsData.teams.length} team configurations`);
+                }
+              }
+            } catch (teamError) {
+              console.warn("Could not load team configuration:", teamError);
+              // Continue anyway, we'll use defaults
+            }
+            
+            return;
+          }
+        } catch (error) {
+          console.log(`Endpoint ${endpoint} failed: ${error.message}`);
+          lastError = error;
+          // Continue to the next endpoint
+        }
+      }
+      
+      // If we get here, all endpoints failed
+      throw new Error(lastError ? lastError.message : "All API endpoints unreachable");
+    }
+    
+    // Initialize the form
+    function initializeForm() {
+      console.log("Initializing form...");
+      
+      // Load URL parameters
+      const urlParams = new URLSearchParams(window.location.search);
+      const pageParam = urlParams.get('page');
+      
+      // Pre-fill the page URL if provided
+      if (pageParam) {
+        document.getElementById('pageUrl').value = decodeURIComponent(pageParam);
+      }
+      
+      // Populate team options
+      populateTeamOptions();
+      
+      // Load agents
+      loadAgents();
+      
+      // Set up agent search functionality
+      setupAgentSearch();
+    }
+    
+    // Setup agent search functionality
+    function setupAgentSearch() {
+      const searchInput = document.getElementById('agentSearch');
+      const dropdown = document.getElementById('agentDropdown');
+      const select = document.getElementById('agentName');
+      
+      // Show dropdown when focusing on the search input
+      searchInput.addEventListener('focus', function() {
+        if (CONFIG.agents.length > 0) {
+          populateAgentDropdown(CONFIG.agents);
+          dropdown.classList.add('show');
+        }
+      });
+      
+      // Filter agents when typing
+      searchInput.addEventListener('input', function() {
+        const query = this.value.toLowerCase();
+        const filteredAgents = CONFIG.agents.filter(agent => 
+          agent.toLowerCase().includes(query)
+        );
+        populateAgentDropdown(filteredAgents);
+        dropdown.classList.add('show');
+      });
+      
+      // Hide dropdown when clicking outside
+      document.addEventListener('click', function(event) {
+        if (!searchInput.contains(event.target) && !dropdown.contains(event.target)) {
+          dropdown.classList.remove('show');
+        }
+      });
+      
+      // Handle keyboard navigation
+      searchInput.addEventListener('keydown', function(e) {
+        const options = dropdown.querySelectorAll('.agent-option');
+        const highlighted = dropdown.querySelector('.highlighted');
+        let index = -1;
+        
+        if (highlighted) {
+          index = Array.from(options).indexOf(highlighted);
+        }
+        
+        // Down arrow
+        if (e.key === 'ArrowDown') {
+          e.preventDefault();
+          
+          if (index < options.length - 1) {
+            if (highlighted) highlighted.classList.remove('highlighted');
+            options[index + 1].classList.add('highlighted');
+            options[index + 1].scrollIntoView({ block: 'nearest' });
+          }
+        }
+        
+        // Up arrow
+        else if (e.key === 'ArrowUp') {
+          e.preventDefault();
+          
+          if (index > 0) {
+            if (highlighted) highlighted.classList.remove('highlighted');
+            options[index - 1].classList.add('highlighted');
+            options[index - 1].scrollIntoView({ block: 'nearest' });
+          }
+        }
+        
+        // Enter key
+        else if (e.key === 'Enter') {
+          e.preventDefault();
+          
+          if (highlighted) {
+            selectAgent(highlighted.dataset.value);
+            dropdown.classList.remove('show');
+          } else if (options.length === 1) {
+            // If there's only one option, select it
+            selectAgent(options[0].dataset.value);
+            dropdown.classList.remove('show');
+          }
+        }
+        
+        // Escape key
+        else if (e.key === 'Escape') {
+          dropdown.classList.remove('show');
+        }
+      });
+    }
+    
+    // Populate agent dropdown with filtered options
+    function populateAgentDropdown(agents) {
+      const dropdown = document.getElementById('agentDropdown');
+      dropdown.innerHTML = '';
+      
+      if (agents.length === 0) {
+        const noResults = document.createElement('div');
+        noResults.className = 'agent-option';
+        noResults.textContent = 'No matching agents found';
+        dropdown.appendChild(noResults);
+      } else {
+        agents.forEach(agent => {
+          const option = document.createElement('div');
+          option.className = 'agent-option';
+          option.textContent = agent;
+          option.dataset.value = agent;
+          
+          option.addEventListener('click', function() {
+            selectAgent(agent);
+            dropdown.classList.remove('show');
+          });
+          
+          dropdown.appendChild(option);
+        });
+      }
+    }
+    
+    // Select an agent from the dropdown
+    function selectAgent(agent) {
+      document.getElementById('agentSearch').value = agent;
+      
+      // Update the hidden select element
+      const select = document.getElementById('agentName');
+      
+      // Find or create the option
+      let option = Array.from(select.options).find(opt => opt.value === agent);
+      if (!option) {
+        option = new Option(agent, agent);
+        select.add(option);
+      }
+      
+      // Set the selected option
+      select.value = agent;
+    }
+    
+    // Populate team options based on configuration
+    function populateTeamOptions() {
+      const teamOptionsContainer = document.getElementById('teamOptions');
+      teamOptionsContainer.innerHTML = ''; // Clear existing options
+      
+      // Use team config if available, otherwise use empty array
+      const teamsToDisplay = CONFIG.teamConfig.length > 0 ? CONFIG.teamConfig : [];
+      
+      teamsToDisplay.forEach(team => {
+        const teamOption = document.createElement('div');
+        teamOption.className = 'team-option';
+        
+        const checkbox = document.createElement('input');
+        checkbox.type = 'checkbox';
+        checkbox.id = `team-${team.id}`;
+        checkbox.name = 'teams';
+        checkbox.value = team.id;
+        
+        const label = document.createElement('label');
+        label.htmlFor = `team-${team.id}`;
+        label.textContent = team.name;
+        
+        if (team.description) {
+          const description = document.createElement('span');
+          description.className = 'team-description';
+          description.textContent = team.description;
+          label.appendChild(description);
+        }
+        
+        teamOption.appendChild(checkbox);
+        teamOption.appendChild(label);
+        teamOptionsContainer.appendChild(teamOption);
+      });
+    }
+    
+    // Load agents from the server
+    function loadAgents() {
+      console.log("Loading agents...");
+      
+      fetch(`${CONFIG.apiUrl}/agents`)
+        .then(response => {
+          if (!response.ok) {
+            throw new Error(`Server error: ${response.status}`);
+          }
+          return response.json();
+        })
+        .then(data => {
+          if (!data.agents || !Array.isArray(data.agents)) {
+            throw new Error('Invalid response format');
+          }
+          
+          // Store agents in CONFIG
+          CONFIG.agents = data.agents;
+          
+          const agentSelect = document.getElementById('agentName');
+          
+          // Clear any existing options except the first one
+          while (agentSelect.options.length > 1) {
+            agentSelect.remove(1);
+          }
+          
+          // Add agent options to the hidden select
+          data.agents.forEach(agent => {
+            const option = document.createElement('option');
+            option.value = agent;
+            option.textContent = agent;
+            agentSelect.appendChild(option);
+          });
+          
+          console.log(`Loaded ${data.agents.length} agents`);
+        })
+        .catch(error => {
+          console.error('Error loading agents:', error);
+          showResult('Unable to load agent list. Please refresh the page or contact support.', 'error');
+        });
+    }
+    
+    // Extract page name from Notion URL
+    function extractPageNameFromUrl(url) {
+      try {
+        // Try to extract page name from URL
+        const urlObj = new URL(url);
+        
+        // Check if it's a Notion URL
+        if (urlObj.hostname.includes('notion.so')) {
+          // Get the pathname
+          const path = urlObj.pathname;
+          
+          // For URL format like: https://www.notion.so/makeheadway/Zendesk-1d116bdf9fd280a68138e64725a967e1
+          // We want to extract "Zendesk"
+          const makeheadwayMatch = path.match(/\/makeheadway\/([^-]+)-[a-f0-9]+/);
+          if (makeheadwayMatch && makeheadwayMatch[1]) {
+            return decodeURIComponent(makeheadwayMatch[1]);
+          }
+          
+          // Format 1: /workspace/Page-Name-1a2b3c...
+          const workspaceMatch = path.match(/\/[^/]+\/([^/-]+)(?:-[a-f0-9]+)?$/);
+          if (workspaceMatch && workspaceMatch[1]) {
+            return decodeURIComponent(workspaceMatch[1].replace(/-/g, ' '));
+          }
+          
+          // Format 2: /Page-Name-1a2b3c...
+          const simpleMatch = path.match(/\/([^/-]+)(?:-[a-f0-9]+)?$/);
+          if (simpleMatch && simpleMatch[1]) {
+            return decodeURIComponent(simpleMatch[1].replace(/-/g, ' '));
+          }
+          
+          // If we have a hash fragment with a page name
+          if (urlObj.hash) {
+            const hashMatch = urlObj.hash.match(/#([^-]+)(?:-[a-f0-9]+)?$/);
+            if (hashMatch && hashMatch[1]) {
+              return decodeURIComponent(hashMatch[1].replace(/-/g, ' '));
+            }
+          }
+        }
+      } catch (e) {
+        console.warn('Error extracting page name:', e);
+      }
+      
+      // Fallback: return "this Notion page"
+      return "this Notion page";
+    }
+    
+    function sendNotification() {
+      const agentName = document.getElementById('agentName').value;
+      const pageUrl = document.getElementById('pageUrl').value.trim();
+      const updateDescription = document.getElementById('updateDescription').value.trim();
+      const channelCheckboxes = document.querySelectorAll('input[name="channels"]:checked');
+      const teamCheckboxes = document.querySelectorAll('input[name="teams"]:checked');
+      const button = document.getElementById('sendButton');
+      
+      // Validate inputs
+      if (!agentName) {
+        showResult('Please select who is responsible for this update', 'error');
+        return;
+      }
+      
+      if (!pageUrl) {
+        showResult('Please provide a link to the updated page or block', 'error');
+        return;
+      }
+      
+      if (!updateDescription) {
+        showResult('Please describe what was updated', 'error');
+        return;
+      }
+      
+      if (channelCheckboxes.length === 0) {
+        showResult('Please select at least one channel to send to', 'error');
+        return;
+      }
+      
+      // Extract page name for the message
+      const pageName = extractPageNameFromUrl(pageUrl);
+      
+      // Collect selected channels
+      const selectedChannels = Array.from(channelCheckboxes).map(cb => cb.value);
+      
+      // Collect selected teams for mentions
+      const selectedTeams = Array.from(teamCheckboxes).map(cb => cb.value);
+      
+      // Disable button and show loading
+      button.disabled = true;
+      button.innerHTML = 'Sending... <span class="loading-indicator"></span>';
+      
+      // Prepare message data
+      const messageData = {
+        agentName: agentName,
+        pageUrl: pageUrl,
+        pageName: pageName,
+        updateDescription: updateDescription,
+        channels: selectedChannels,
+        teams: selectedTeams
+      };
+      
+      // Send the request to your service
+      fetch(`${CONFIG.apiUrl}/send-to-slack`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(messageData)
+      })
+      .then(response => response.json())
+      .then(data => {
+        if (data.success) {
+          showResult('Update notification sent successfully!', 'success');
+          // Clear form fields on success
+          document.getElementById('updateDescription').value = '';
+          // Don't clear agent or URL as they may be reused
+        } else {
+          showResult('Error: ' + (data.error || 'Failed to send notification'), 'error');
+        }
+      })
+      .catch(error => {
+        showResult('Error: ' + error.message, 'error');
+        console.error('Error:', error);
+      })
+      .finally(() => {
+        // Re-enable button
+        button.disabled = false;
+        button.innerHTML = 'Send Notification';
+      });
+    }
+    
+    function showResult(message, type) {
+      const resultDiv = document.getElementById('result');
+      resultDiv.textContent = message;
+      resultDiv.className = type;
+      resultDiv.style.display = 'block';
+      
+      if (type === 'success') {
+        setTimeout(function() {
+          resultDiv.style.display = 'none';
+        }, 5000);
+      }
+    }
+    
+    // Start the application
+    document.addEventListener('DOMContentLoaded', bootstrap);
+  </script> configurations`);
                 }
               }
             } catch (teamError) {
