@@ -3,26 +3,53 @@
 <head>
   <title>Send to Slack</title>
   <style>
-    body { font-family: sans-serif; padding: 20px; margin: 0; }
-    textarea { width: 100%; height: 100px; margin: 10px 0; padding: 5px; box-sizing: border-box; }
-    button { background: #4A154B; color: white; border: none; padding: 10px 15px; cursor: pointer; border-radius: 4px; }
-    #result { margin-top: 10px; padding: 10px; border-radius: 4px; display: none; }
-    .success { background: #d4edda; color: #155724; }
-    .error { background: #f8d7da; color: #721c24; }
-    h3 { margin-top: 0; }
+    body { font-family: -apple-system, system-ui, sans-serif; padding: 20px; margin: 0; }
+    .container { max-width: 500px; margin: 0 auto; }
+    textarea { 
+      width: 100%; 
+      height: 100px; 
+      margin: 10px 0; 
+      padding: 10px; 
+      box-sizing: border-box;
+      border: 1px solid #ddd;
+      border-radius: 4px;
+      resize: vertical;
+      font-family: inherit;
+    }
+    button { 
+      background: #4A154B; 
+      color: white; 
+      border: none; 
+      padding: 10px 15px; 
+      cursor: pointer; 
+      border-radius: 4px;
+      font-size: 14px;
+    }
+    button:hover { background: #611f69; }
+    #result { 
+      margin-top: 10px; 
+      padding: 10px; 
+      border-radius: 4px; 
+      display: none; 
+    }
+    .success { background: #dff0d8; color: #3c763d; border: 1px solid #d6e9c6; }
+    .error { background: #f2dede; color: #a94442; border: 1px solid #ebccd1; }
+    h3 { margin-top: 0; color: #333; }
     .loading { display: inline-block; margin-left: 5px; animation: spin 2s linear infinite; }
     @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
   </style>
 </head>
 <body>
-  <h3>Send Message to Slack</h3>
-  <textarea id='message' placeholder='Type your message here'></textarea>
-  <button id="sendButton" onclick='sendMessage()'>Send to Slack</button>
-  <div id='result'></div>
+  <div class="container">
+    <h3>Send Message to Slack</h3>
+    <textarea id='message' placeholder='Type your message here...'></textarea>
+    <button id="sendButton" onclick='sendMessage()'>Send to Slack</button>
+    <div id='result'></div>
+  </div>
 
   <script>
     function sendMessage() {
-      var message = document.getElementById('message').value;
+      var message = document.getElementById('message').value.trim();
       var resultDiv = document.getElementById('result');
       var button = document.getElementById('sendButton');
       var originalButtonText = button.textContent;
@@ -36,31 +63,52 @@
       button.disabled = true;
       button.innerHTML = 'Sending... <span class="loading">⟳</span>';
       
-      // Google Apps Script URL
-      var scriptUrl = 'https://script.google.com/a/macros/makeheadway.com/s/AKfycbwiEnkUY0MKxQx6av7Z5OadSr9Ku_uMeu3iN9agcbTADc-vQV-djjbw1Kr0uyRIEWub/exec';
+      // Create form for sending directly to Slack
+      var form = document.createElement('form');
+      form.method = 'POST';
+      form.action = 'https://hooks.slack.com/services/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';
+      form.target = 'hidden_iframe';
+      form.style.display = 'none';
       
-      // Add the message as a parameter
-      scriptUrl += '?text=' + encodeURIComponent(message);
+      // Create a hidden input with the Slack payload
+      var input = document.createElement('input');
+      input.type = 'hidden';
+      input.name = 'payload';
+      input.value = JSON.stringify({ text: message });
       
-      // Send the request
-      fetch(scriptUrl, {
-        method: 'POST',
-        mode: 'no-cors' // Important for cross-origin requests
-      })
-      .then(function() {
-        // With no-cors we can't read the response, so we just assume success
+      // Add to form and document
+      form.appendChild(input);
+      document.body.appendChild(form);
+      
+      // Create hidden iframe to prevent page navigation
+      var iframe = document.createElement('iframe');
+      iframe.name = 'hidden_iframe';
+      iframe.style.display = 'none';
+      document.body.appendChild(iframe);
+      
+      // Handle the response
+      iframe.onload = function() {
         showResult('Message sent successfully!', 'success');
         document.getElementById('message').value = '';
-      })
-      .catch(function(error) {
-        showResult('Error: ' + error.message, 'error');
-        console.error('Error:', error);
-      })
-      .finally(function() {
-        // Re-enable button and restore text
         button.disabled = false;
         button.innerHTML = originalButtonText;
-      });
+        
+        // Clean up
+        setTimeout(function() {
+          document.body.removeChild(form);
+          document.body.removeChild(iframe);
+        }, 1000);
+      };
+      
+      // Handle errors
+      iframe.onerror = function() {
+        showResult('Error sending message. Please try again.', 'error');
+        button.disabled = false;
+        button.innerHTML = originalButtonText;
+      };
+      
+      // Submit the form
+      form.submit();
     }
     
     function showResult(message, type) {
