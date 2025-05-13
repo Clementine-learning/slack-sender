@@ -1,68 +1,109 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
-  <title>Send to Slack</title>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Knowledge Base Update Notification</title>
   <style>
-    body { font-family: -apple-system, system-ui, sans-serif; padding: 20px; margin: 0; }
-    .container { max-width: 500px; margin: 0 auto; }
-    textarea { 
-      width: 100%; 
-      height: 100px; 
-      margin: 10px 0; 
-      padding: 10px; 
-      box-sizing: border-box;
-      border: 1px solid #ddd;
-      border-radius: 4px;
-      resize: vertical;
-      font-family: inherit;
-    }
-    button { 
-      background: #4A154B; 
-      color: white; 
-      border: none; 
-      padding: 10px 15px; 
-      cursor: pointer; 
-      border-radius: 4px;
-      font-size: 14px;
-    }
-    button:hover { background: #611f69; }
-    button:disabled { background: #9e9e9e; cursor: not-allowed; }
-    #result { 
-      margin-top: 10px; 
-      padding: 10px; 
-      border-radius: 4px; 
-      display: none; 
-    }
-    .success { background: #dff0d8; color: #3c763d; border: 1px solid #d6e9c6; }
-    .error { background: #f2dede; color: #a94442; border: 1px solid #ebccd1; }
-    h3 { margin-top: 0; color: #333; }
+    /* Your styling here */
+    /* ... */
   </style>
 </head>
 <body>
-  <div class="container">
-    <h3>Send Message to Slack</h3>
-    <textarea id='message' placeholder='Type your message here...'></textarea>
-    <button id="sendButton" onclick='sendMessage()'>Send to Slack</button>
-    <div id='result'></div>
+  <div class="notification-form">
+    <div class="form-title">Knowledge Base Update Notification</div>
+    
+    <div class="form-group">
+      <label for="pageUrl">Link to updated page or block:</label>
+      <input type="url" id="pageUrl" placeholder="https://notion.so/..." required>
+    </div>
+    
+    <div class="form-group">
+      <label for="updaterName">Your Name:</label>
+      <input type="text" id="updaterName" placeholder="Enter your name" required>
+    </div>
+    
+    <div class="form-group">
+      <label>Notify in channel:</label>
+      <div class="channel-options">
+        <div class="channel-option">
+          <input type="checkbox" id="channel1" name="channels" value="support" checked>
+          <label for="channel1">Support Team</label>
+        </div>
+        <div class="channel-option">
+          <input type="checkbox" id="channel2" name="channels" value="general">
+          <label for="channel2">General</label>
+        </div>
+      </div>
+    </div>
+    
+    <div class="form-group">
+      <label for="updateDescription">What changed? (please provide context)</label>
+      <textarea id="updateDescription" placeholder="Describe what was updated..." required></textarea>
+    </div>
+    
+    <button id="sendButton" onclick="sendNotification()">Send Notification</button>
+    <div id="result"></div>
   </div>
 
   <script>
-    function sendMessage() {
-      var message = document.getElementById('message').value.trim();
-      var resultDiv = document.getElementById('result');
-      var button = document.getElementById('sendButton');
+    // Check for URL parameters on page load
+    document.addEventListener('DOMContentLoaded', function() {
+      const urlParams = new URLSearchParams(window.location.search);
+      const pageParam = urlParams.get('page');
       
-      if (!message) {
-        showResult('Please enter a message', 'error');
+      // Pre-fill the page URL if provided
+      if (pageParam) {
+        document.getElementById('pageUrl').value = decodeURIComponent(pageParam);
+      }
+    });
+    
+    function sendNotification() {
+      const pageUrl = document.getElementById('pageUrl').value.trim();
+      const updateDescription = document.getElementById('updateDescription').value.trim();
+      const updaterName = document.getElementById('updaterName').value.trim();
+      const channelCheckboxes = document.querySelectorAll('input[name="channels"]:checked');
+      const resultDiv = document.getElementById('result');
+      const button = document.getElementById('sendButton');
+      
+      // Validate inputs
+      if (!pageUrl) {
+        showResult('Please provide a link to the updated page or block', 'error');
         return;
       }
       
-      // Disable button
-      button.disabled = true;
-      button.textContent = 'Sending...';
+      if (!updaterName) {
+        showResult('Please enter your name', 'error');
+        return;
+      }
       
-      // Your Replit service URL
-      var serviceUrl = 'https://e62db491-0255-4031-bbd8-e584bf9c4467-00-347oxjexqfcpq.janeway.replit.dev/send-to-slack';
+      if (!updateDescription) {
+        showResult('Please describe what was updated', 'error');
+        return;
+      }
+      
+      if (channelCheckboxes.length === 0) {
+        showResult('Please select at least one channel', 'error');
+        return;
+      }
+      
+      // Collect selected channels
+      const selectedChannels = Array.from(channelCheckboxes).map(cb => cb.value);
+      
+      // Disable button and show loading
+      button.disabled = true;
+      button.innerHTML = 'Sending... <span class="loading-indicator"></span>';
+      
+      // Prepare message data
+      const messageData = {
+        pageUrl: pageUrl,
+        updateDescription: updateDescription,
+        channels: selectedChannels,
+        updaterName: updaterName
+      };
+      
+      // Your Replit service URL (no Slack URLs here!)
+      const serviceUrl = 'https://e62db491-0255-4031-bbd8-e584bf9c4467-00-347oxjexqfcpq.janeway.replit.dev/send-to-slack';
       
       // Send the request to your service
       fetch(serviceUrl, {
@@ -70,15 +111,17 @@
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({ text: message })
+        body: JSON.stringify(messageData)
       })
       .then(response => response.json())
       .then(data => {
         if (data.success) {
-          showResult('Message sent successfully!', 'success');
-          document.getElementById('message').value = '';
+          showResult('Update notification sent successfully!', 'success');
+          // Clear form fields on success
+          document.getElementById('updateDescription').value = '';
+          // Don't clear URL and name as they may be reused
         } else {
-          showResult('Error: ' + (data.error || 'Failed to send message'), 'error');
+          showResult('Error: ' + (data.error || 'Failed to send notification'), 'error');
         }
       })
       .catch(error => {
@@ -88,12 +131,12 @@
       .finally(() => {
         // Re-enable button
         button.disabled = false;
-        button.textContent = 'Send to Slack';
+        button.innerHTML = 'Send Notification';
       });
     }
     
     function showResult(message, type) {
-      var resultDiv = document.getElementById('result');
+      const resultDiv = document.getElementById('result');
       resultDiv.textContent = message;
       resultDiv.className = type;
       resultDiv.style.display = 'block';
@@ -101,7 +144,7 @@
       if (type === 'success') {
         setTimeout(function() {
           resultDiv.style.display = 'none';
-        }, 3000);
+        }, 5000);
       }
     }
   </script>
