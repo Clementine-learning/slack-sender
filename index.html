@@ -1,0 +1,67 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Send to Slack</title>
+  <style>
+    body { font-family: sans-serif; padding: 20px; margin: 0; }
+    textarea { width: 100%; height: 100px; margin: 10px 0; padding: 5px; box-sizing: border-box; }
+    button { background: #4A154B; color: white; border: none; padding: 10px 15px; cursor: pointer; border-radius: 4px; }
+    #result { margin-top: 10px; padding: 10px; border-radius: 4px; display: none; }
+    .success { background: #d4edda; color: #155724; }
+    .error { background: #f8d7da; color: #721c24; }
+    h3 { margin-top: 0; }
+  </style>
+</head>
+<body>
+  <h3>Send Message to Slack</h3>
+  <textarea id='message' placeholder='Type your message here'></textarea>
+  <button onclick='sendMessage()'>Send to Slack</button>
+  <div id='result'></div>
+
+  <script>
+    function sendMessage() {
+      var message = document.getElementById('message').value;
+      var resultDiv = document.getElementById('result');
+      
+      if (!message) {
+        showResult('Please enter a message', 'error');
+        return;
+      }
+      
+      // Google Apps Script URL
+      var scriptUrl = 'https://script.google.com/a/macros/makeheadway.com/s/AKfycbwiEnkUY0MKxQx6av7Z5OadSr9Ku_uMeu3iN9agcbTADc-vQV-djjbw1Kr0uyRIEWub/exec';
+      
+      // Add the message as a parameter
+      scriptUrl += '?text=' + encodeURIComponent(message);
+      
+      // Send the request
+      fetch(scriptUrl, {method: 'POST'})
+        .then(response => response.json())
+        .then(data => {
+          if (data.success) {
+            showResult('Message sent successfully!', 'success');
+            document.getElementById('message').value = '';
+          } else {
+            showResult('Error: ' + data.error, 'error');
+          }
+        })
+        .catch(error => {
+          showResult('Error: ' + error, 'error');
+        });
+    }
+    
+    function showResult(message, type) {
+      var resultDiv = document.getElementById('result');
+      resultDiv.textContent = message;
+      resultDiv.className = type;
+      resultDiv.style.display = 'block';
+      
+      if (type === 'success') {
+        setTimeout(function() {
+          resultDiv.style.display = 'none';
+        }, 3000);
+      }
+    }
+  </script>
+</body>
+</html>
