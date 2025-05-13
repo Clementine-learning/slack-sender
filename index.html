@@ -5,8 +5,8 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Knowledge Base Update Notification</title>
   <style>
-    /* Base styles that work for both light and dark modes */
     :root {
+      /* Light mode variables */
       --bg-color: #ffffff;
       --text-color: #333333;
       --border-color: #e0e0e0;
@@ -21,24 +21,7 @@
       --box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
     }
     
-    /* Dark mode specific variables */
-    @media (prefers-color-scheme: dark) {
-      :root {
-        --bg-color: #1e1e1e;
-        --text-color: #e6e6e6;
-        --border-color: #444;
-        --input-bg: #2d2d2d;
-        --primary-color: #3a97f0;
-        --hover-color: #5cabf2;
-        --success-bg: #1e3a2b;
-        --success-color: #4dd486;
-        --error-bg: #3b1d1d;
-        --error-color: #ff7878;
-        --box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
-      }
-    }
-    
-    /* Force dark mode for Notion embedding */
+    /* Dark mode styles - applied with class */
     .dark-mode {
       --bg-color: #1e1e1e;
       --text-color: #e6e6e6;
@@ -294,7 +277,7 @@
       to { transform: rotate(360deg); }
     }
     
-    /* Loading screen */
+    /* Loading screen and error screen */
     #loadingScreen {
       position: fixed;
       top: 0;
@@ -310,84 +293,15 @@
       font-size: 20px;
     }
     
-    /* Error screen */
     #errorScreen {
       display: none;
       text-align: center;
       margin-top: 50px;
       color: var(--error-color);
     }
-    
-    /* Mode toggle switch */
-    .mode-toggle {
-      position: absolute;
-      top: 20px;
-      right: 20px;
-      display: flex;
-      align-items: center;
-    }
-    
-    .mode-toggle label {
-      margin-right: 10px;
-      font-size: 14px;
-    }
-    
-    .switch {
-      position: relative;
-      display: inline-block;
-      width: 60px;
-      height: 34px;
-    }
-    
-    .switch input {
-      opacity: 0;
-      width: 0;
-      height: 0;
-    }
-    
-    .slider {
-      position: absolute;
-      cursor: pointer;
-      top: 0;
-      left: 0;
-      right: 0;
-      bottom: 0;
-      background-color: #ccc;
-      transition: .4s;
-      border-radius: 34px;
-    }
-    
-    .slider:before {
-      position: absolute;
-      content: "";
-      height: 26px;
-      width: 26px;
-      left: 4px;
-      bottom: 4px;
-      background-color: white;
-      transition: .4s;
-      border-radius: 50%;
-    }
-    
-    input:checked + .slider {
-      background-color: var(--primary-color);
-    }
-    
-    input:checked + .slider:before {
-      transform: translateX(26px);
-    }
   </style>
 </head>
-<body id="body">
-  <!-- Dark mode toggle -->
-  <div class="mode-toggle">
-    <label for="darkModeToggle">Dark Mode</label>
-    <label class="switch">
-      <input type="checkbox" id="darkModeToggle" checked>
-      <span class="slider"></span>
-    </label>
-  </div>
-
+<body class="dark-mode">
   <!-- Loading screen -->
   <div id="loadingScreen">
     <span>Loading configuration...</span>
@@ -398,12 +312,16 @@
     <div class="form-title">Knowledge Base Update Notification</div>
     
     <div class="form-group">
-      <label for="agentName">Who is responsible for this update?</label>
-      <select id="agentName" required>
-        <option value="">-- Select an agent --</option>
-        <!-- Agent options will be loaded from the server -->
-      </select>
-      <span class="label-helper">Select your name from the list</span>
+      <label for="agentSearch">Who is responsible for this update?</label>
+      <div class="select-container">
+        <input type="text" id="agentSearch" placeholder="Type to search agents..." autocomplete="off">
+        <div id="agentDropdown" class="agent-dropdown"></div>
+        <select id="agentName" required>
+          <option value="">-- Select an agent --</option>
+          <!-- Agent options will be loaded from the server -->
+        </select>
+      </div>
+      <span class="label-helper">Start typing to search for your name</span>
     </div>
     
     <div class="form-group">
@@ -416,6 +334,21 @@
       <label>Send notification to:</label>
       <div class="team-options" id="teamOptions">
         <!-- Team options will be loaded dynamically -->
+      </div>
+      <span class="label-helper">Select which teams to mention in this notification</span>
+    </div>
+    
+    <div class="form-group">
+      <label>Select channel:</label>
+      <div class="channel-options">
+        <div class="channel-option">
+          <input type="checkbox" id="channel-support-updates" name="channels" value="support-updates" checked>
+          <label for="channel-support-updates">Support Updates</label>
+        </div>
+        <div class="channel-option">
+          <input type="checkbox" id="channel-outstaff-support" name="channels" value="outstaff-support">
+          <label for="channel-outstaff-support">Outstaff Support</label>
+        </div>
       </div>
       <span class="label-helper">Select where to send this notification</span>
     </div>
@@ -438,15 +371,9 @@
   </div>
 
   <script>
-    // Use a bootstrapping approach to load configuration
-    // This allows us to avoid hardcoding the API URL
-    
-    // List of possible API endpoints to try - we only need one to work
-    // This list should be ordered from most preferred to least preferred
+    // List of possible API endpoints to try
     const POSSIBLE_API_ENDPOINTS = [
-      // Primary endpoint - replace with your actual Replit URL
       "https://e62db491-0255-4031-bbd8-e584bf9c4467-00-347oxjexqfcpq.janeway.replit.dev",
-      // Backup endpoint if primary is unreachable - replace with your backup URL if available
       "https://slack-sender-service.clementine-top.repl.co"
     ];
     
@@ -457,18 +384,6 @@
       agents: [],
       teamConfig: []
     };
-    
-    // Set dark mode by default - since Notion is usually in dark mode
-    document.getElementById('body').classList.add('dark-mode');
-    
-    // Dark mode toggle functionality
-    document.getElementById('darkModeToggle').addEventListener('change', function(event) {
-      if (event.target.checked) {
-        document.getElementById('body').classList.add('dark-mode');
-      } else {
-        document.getElementById('body').classList.remove('dark-mode');
-      }
-    });
     
     // Bootstrap the application
     function bootstrap() {
@@ -567,6 +482,11 @@
       const dropdown = document.getElementById('agentDropdown');
       const select = document.getElementById('agentName');
       
+      if (!searchInput || !dropdown || !select) {
+        console.error("Agent search elements not found in the DOM");
+        return;
+      }
+      
       // Show dropdown when focusing on the search input
       searchInput.addEventListener('focus', function() {
         if (CONFIG.agents.length > 0) {
@@ -648,6 +568,8 @@
     // Populate agent dropdown with filtered options
     function populateAgentDropdown(agents) {
       const dropdown = document.getElementById('agentDropdown');
+      if (!dropdown) return;
+      
       dropdown.innerHTML = '';
       
       if (agents.length === 0) {
@@ -674,10 +596,14 @@
     
     // Select an agent from the dropdown
     function selectAgent(agent) {
-      document.getElementById('agentSearch').value = agent;
+      const searchInput = document.getElementById('agentSearch');
+      if (!searchInput) return;
+      
+      searchInput.value = agent;
       
       // Update the hidden select element
       const select = document.getElementById('agentName');
+      if (!select) return;
       
       // Find or create the option
       let option = Array.from(select.options).find(opt => opt.value === agent);
@@ -693,6 +619,8 @@
     // Populate team options based on configuration
     function populateTeamOptions() {
       const teamOptionsContainer = document.getElementById('teamOptions');
+      if (!teamOptionsContainer) return;
+      
       teamOptionsContainer.innerHTML = ''; // Clear existing options
       
       // Use team config if available, otherwise use empty array
@@ -745,6 +673,7 @@
           CONFIG.agents = data.agents;
           
           const agentSelect = document.getElementById('agentName');
+          if (!agentSelect) return;
           
           // Clear any existing options except the first one
           while (agentSelect.options.length > 1) {
@@ -897,6 +826,8 @@
     
     function showResult(message, type) {
       const resultDiv = document.getElementById('result');
+      if (!resultDiv) return;
+      
       resultDiv.textContent = message;
       resultDiv.className = type;
       resultDiv.style.display = 'block';
@@ -908,268 +839,7 @@
       }
     }
     
-    // Start the application
-    document.addEventListener('DOMContentLoaded', bootstrap);
-  </script> configurations`);
-                }
-              }
-            } catch (teamError) {
-              console.warn("Could not load team configuration:", teamError);
-              // Continue anyway, we'll use defaults
-            }
-            
-            return;
-          }
-        } catch (error) {
-          console.log(`Endpoint ${endpoint} failed: ${error.message}`);
-          lastError = error;
-          // Continue to the next endpoint
-        }
-      }
-      
-      // If we get here, all endpoints failed
-      throw new Error(lastError ? lastError.message : "All API endpoints unreachable");
-    }
-    
-    // Initialize the form
-    function initializeForm() {
-      console.log("Initializing form...");
-      
-      // Load URL parameters
-      const urlParams = new URLSearchParams(window.location.search);
-      const pageParam = urlParams.get('page');
-      
-      // Pre-fill the page URL if provided
-      if (pageParam) {
-        document.getElementById('pageUrl').value = decodeURIComponent(pageParam);
-      }
-      
-      // Populate team options
-      populateTeamOptions();
-      
-      // Load agents
-      loadAgents();
-    }
-    
-    // Populate team options based on configuration
-    function populateTeamOptions() {
-      const teamOptionsContainer = document.getElementById('teamOptions');
-      teamOptionsContainer.innerHTML = ''; // Clear existing options
-      
-      // Use team config if available, otherwise fallback to default options
-      const teamsToDisplay = CONFIG.teamConfig.length > 0 ? CONFIG.teamConfig : [
-        { id: 'support-tribe', name: 'Support Tribe', description: 'For the entire support team' },
-        { id: 'headway-support-team', name: 'Headway Support', description: 'For people working mainly with Headway App' },
-        { id: 'support-updates', name: 'Support Updates', description: 'General support updates channel' }
-      ];
-      
-      teamsToDisplay.forEach(team => {
-        const teamOption = document.createElement('div');
-        teamOption.className = 'team-option';
-        
-        const checkbox = document.createElement('input');
-        checkbox.type = 'checkbox';
-        checkbox.id = `team-${team.id}`;
-        checkbox.name = 'teams';
-        checkbox.value = team.id;
-        // Check the first option by default
-        if (team.id === teamsToDisplay[0].id) {
-          checkbox.checked = true;
-        }
-        
-        const label = document.createElement('label');
-        label.htmlFor = `team-${team.id}`;
-        label.textContent = team.name;
-        
-        if (team.description) {
-          const description = document.createElement('span');
-          description.className = 'team-description';
-          description.textContent = team.description;
-          label.appendChild(description);
-        }
-        
-        teamOption.appendChild(checkbox);
-        teamOption.appendChild(label);
-        teamOptionsContainer.appendChild(teamOption);
-      });
-    }
-    
-    // Load agents from the server
-    function loadAgents() {
-      console.log("Loading agents...");
-      
-      fetch(`${CONFIG.apiUrl}/agents`)
-        .then(response => {
-          if (!response.ok) {
-            throw new Error(`Server error: ${response.status}`);
-          }
-          return response.json();
-        })
-        .then(data => {
-          if (!data.agents || !Array.isArray(data.agents)) {
-            throw new Error('Invalid response format');
-          }
-          
-          const agentSelect = document.getElementById('agentName');
-          
-          // Clear any existing options except the first one
-          while (agentSelect.options.length > 1) {
-            agentSelect.remove(1);
-          }
-          
-          // Add agent options
-          data.agents.forEach(agent => {
-            const option = document.createElement('option');
-            option.value = agent;
-            option.textContent = agent;
-            agentSelect.appendChild(option);
-          });
-          
-          console.log(`Loaded ${data.agents.length} agents`);
-        })
-        .catch(error => {
-          console.error('Error loading agents:', error);
-          showResult('Unable to load agent list. Please refresh the page or contact support.', 'error');
-        });
-    }
-    
-    // Extract page name from Notion URL
-    function extractPageNameFromUrl(url) {
-      try {
-        // Try to extract page name from URL
-        const urlObj = new URL(url);
-        
-        // Check if it's a Notion URL
-        if (urlObj.hostname.includes('notion.so')) {
-          // Get the pathname
-          const path = urlObj.pathname;
-          
-          // For URL format like: https://www.notion.so/makeheadway/Zendesk-1d116bdf9fd280a68138e64725a967e1
-          // We want to extract "Zendesk"
-          const makeheadwayMatch = path.match(/\/makeheadway\/([^-]+)-[a-f0-9]+/);
-          if (makeheadwayMatch && makeheadwayMatch[1]) {
-            return decodeURIComponent(makeheadwayMatch[1]);
-          }
-          
-          // Format 1: /workspace/Page-Name-1a2b3c...
-          const workspaceMatch = path.match(/\/[^/]+\/([^/-]+)(?:-[a-f0-9]+)?$/);
-          if (workspaceMatch && workspaceMatch[1]) {
-            return decodeURIComponent(workspaceMatch[1].replace(/-/g, ' '));
-          }
-          
-          // Format 2: /Page-Name-1a2b3c...
-          const simpleMatch = path.match(/\/([^/-]+)(?:-[a-f0-9]+)?$/);
-          if (simpleMatch && simpleMatch[1]) {
-            return decodeURIComponent(simpleMatch[1].replace(/-/g, ' '));
-          }
-          
-          // If we have a hash fragment with a page name
-          if (urlObj.hash) {
-            const hashMatch = urlObj.hash.match(/#([^-]+)(?:-[a-f0-9]+)?$/);
-            if (hashMatch && hashMatch[1]) {
-              return decodeURIComponent(hashMatch[1].replace(/-/g, ' '));
-            }
-          }
-        }
-      } catch (e) {
-        console.warn('Error extracting page name:', e);
-      }
-      
-      // Fallback: return "this Notion page"
-      return "this Notion page";
-    }
-    
-    function sendNotification() {
-      const agentName = document.getElementById('agentName').value;
-      const pageUrl = document.getElementById('pageUrl').value.trim();
-      const updateDescription = document.getElementById('updateDescription').value.trim();
-      const teamCheckboxes = document.querySelectorAll('input[name="teams"]:checked');
-      const button = document.getElementById('sendButton');
-      
-      // Validate inputs
-      if (!agentName) {
-        showResult('Please select who is responsible for this update', 'error');
-        return;
-      }
-      
-      if (!pageUrl) {
-        showResult('Please provide a link to the updated page or block', 'error');
-        return;
-      }
-      
-      if (!updateDescription) {
-        showResult('Please describe what was updated', 'error');
-        return;
-      }
-      
-      if (teamCheckboxes.length === 0) {
-        showResult('Please select at least one channel to notify', 'error');
-        return;
-      }
-      
-      // Extract page name for the message
-      const pageName = extractPageNameFromUrl(pageUrl);
-      
-      // Collect selected teams
-      const selectedTeams = Array.from(teamCheckboxes).map(cb => cb.value);
-      
-      // Disable button and show loading
-      button.disabled = true;
-      button.innerHTML = 'Sending... <span class="loading-indicator"></span>';
-      
-      // Prepare message data
-      const messageData = {
-        agentName: agentName,
-        pageUrl: pageUrl,
-        pageName: pageName,
-        updateDescription: updateDescription,
-        teams: selectedTeams
-      };
-      
-      // Send the request to your service
-      fetch(`${CONFIG.apiUrl}/send-to-slack`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(messageData)
-      })
-      .then(response => response.json())
-      .then(data => {
-        if (data.success) {
-          showResult('Update notification sent successfully!', 'success');
-          // Clear form fields on success
-          document.getElementById('updateDescription').value = '';
-          // Don't clear agent or URL as they may be reused
-        } else {
-          showResult('Error: ' + (data.error || 'Failed to send notification'), 'error');
-        }
-      })
-      .catch(error => {
-        showResult('Error: ' + error.message, 'error');
-        console.error('Error:', error);
-      })
-      .finally(() => {
-        // Re-enable button
-        button.disabled = false;
-        button.innerHTML = 'Send Notification';
-      });
-    }
-    
-    function showResult(message, type) {
-      const resultDiv = document.getElementById('result');
-      resultDiv.textContent = message;
-      resultDiv.className = type;
-      resultDiv.style.display = 'block';
-      
-      if (type === 'success') {
-        setTimeout(function() {
-          resultDiv.style.display = 'none';
-        }, 5000);
-      }
-    }
-    
-    // Start the application
+    // Start the application when the document is loaded
     document.addEventListener('DOMContentLoaded', bootstrap);
   </script>
 </body>
