@@ -218,6 +218,24 @@
       gap: 8px;
     }
     
+    /* Individual channel option */
+    .channel-option {
+      display: flex;
+      align-items: center;
+      margin-bottom: 8px;
+    }
+    
+    .channel-option input[type="checkbox"] {
+      margin-right: 10px;
+      transform: scale(1.2);
+    }
+    
+    .channel-option label {
+      font-size: 16px;
+      font-weight: normal;
+      margin-bottom: 0;
+    }
+    
     /* Button */
     button {
       background-color: var(--primary-color);
@@ -318,7 +336,6 @@
         <div id="agentDropdown" class="agent-dropdown"></div>
         <select id="agentName" required>
           <option value="">-- Select an agent --</option>
-          <!-- Agent options will be loaded from the server -->
         </select>
       </div>
       <span class="label-helper">Start typing to search for your name</span>
@@ -623,8 +640,15 @@
       
       teamOptionsContainer.innerHTML = ''; // Clear existing options
       
-      // Use team config if available, otherwise use empty array
-      const teamsToDisplay = CONFIG.teamConfig.length > 0 ? CONFIG.teamConfig : [];
+      // Use team config if available, otherwise use default teams
+      const teamsToDisplay = CONFIG.teamConfig.length > 0 ? 
+        CONFIG.teamConfig : 
+        [
+          { id: 'support-team', name: 'Support Team', description: 'Customer-facing support specialists' },
+          { id: 'dev-team', name: 'Development Team', description: 'Engineers and developers' },
+          { id: 'design-team', name: 'Design Team', description: 'UI/UX designers' },
+          { id: 'content-team', name: 'Content Team', description: 'Content writers and documentation specialists' }
+        ];
       
       teamsToDisplay.forEach(team => {
         const teamOption = document.createElement('div');
@@ -693,6 +717,10 @@
         .catch(error => {
           console.error('Error loading agents:', error);
           showResult('Unable to load agent list. Please refresh the page or contact support.', 'error');
+          
+          // Fall back to a default list of agents
+          CONFIG.agents = ['Jane Doe', 'John Smith', 'Alex Johnson', 'Sam Wilson', 'Taylor Brown'];
+          populateAgentDropdown(CONFIG.agents);
         });
     }
     
