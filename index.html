@@ -183,12 +183,7 @@
       <label for="agentName">Who is responsible for this update?</label>
       <select id="agentName" required>
         <option value="">-- Select an agent --</option>
-        <option value="Anna">Anna</option>
-        <option value="Bob">Bob</option>
-        <option value="Carlos">Carlos</option>
-        <option value="Diana">Diana</option>
-        <option value="Elena">Elena</option>
-        <!-- Add more agents as needed -->
+        <!-- Agent options will be loaded from the server -->
       </select>
       <span class="label-helper">Select your name from the list</span>
     </div>
@@ -200,22 +195,18 @@
     </div>
     
     <div class="form-group">
-      <label>Notify these teams:</label>
+      <label>Send notification to:</label>
       <div class="channel-options">
         <div class="channel-option">
-          <input type="checkbox" id="teamSupport" name="teams" value="support" checked>
-          <label for="teamSupport">Support Team</label>
+          <input type="checkbox" id="teamSupportUpdates" name="teams" value="support-updates" checked>
+          <label for="teamSupportUpdates">Support Updates</label>
         </div>
         <div class="channel-option">
-          <input type="checkbox" id="teamProduct" name="teams" value="product">
-          <label for="teamProduct">Product Team</label>
-        </div>
-        <div class="channel-option">
-          <input type="checkbox" id="teamEngineering" name="teams" value="engineering">
-          <label for="teamEngineering">Engineering</label>
+          <input type="checkbox" id="teamOutstaffSupport" name="teams" value="outstaff-support">
+          <label for="teamOutstaffSupport">Outstaff Support</label>
         </div>
       </div>
-      <span class="label-helper">Select all teams that should be notified about this update</span>
+      <span class="label-helper">Select where to send this notification</span>
     </div>
     
     <div class="form-group">
@@ -229,25 +220,12 @@
   </div>
 
   <script>
-    // Map of agents to their Slack handles
-    const AGENT_SLACK_HANDLES = {
-      'Anna': '@anna.smith',
-      'Bob': '@bob.jones',
-      'Carlos': '@carlos',
-      'Diana': '@diana.miller',
-      'Elena': '@elena'
-      // Add more mappings as needed
-    };
+    // API URL
+    const API_URL = 'https://e62db491-0255-4031-bbd8-e584bf9c4467-00-347oxjexqfcpq.janeway.replit.dev';
     
-    // Map of teams to their Slack mentions
-    const TEAM_SLACK_MENTIONS = {
-      'support': '@support-team',
-      'product': '@product-team',
-      'engineering': '@engineering-team'
-    };
-    
-    // Check for URL parameters on page load
+    // Load agent data from the server
     document.addEventListener('DOMContentLoaded', function() {
+      // Load URL parameters
       const urlParams = new URLSearchParams(window.location.search);
       const pageParam = urlParams.get('page');
       
@@ -255,13 +233,34 @@
       if (pageParam) {
         document.getElementById('pageUrl').value = decodeURIComponent(pageParam);
       }
+      
+      // Load agents
+      fetch(`${API_URL}/agents`)
+        .then(response => response.json())
+        .then(data => {
+          const agentSelect = document.getElementById('agentName');
+          
+          // Clear any existing options except the first one
+          while (agentSelect.options.length > 1) {
+            agentSelect.remove(1);
+          }
+          
+          // Add agent options
+          data.agents.forEach(agent => {
+            const option = document.createElement('option');
+            option.value = agent;
+            option.textContent = agent;
+            agentSelect.appendChild(option);
+          });
+        })
+        .catch(error => {
+          console.error('Error loading agents:', error);
+          // If unable to load, no fallback needed as we've hardcoded the options
+        });
     });
     
     function sendNotification() {
-      const agentSelect = document.getElementById('agentName');
-      const agentName = agentSelect.value;
-      const agentSlackHandle = AGENT_SLACK_HANDLES[agentName] || agentName;
-      
+      const agentName = document.getElementById('agentName').value;
       const pageUrl = document.getElementById('pageUrl').value.trim();
       const updateDescription = document.getElementById('updateDescription').value.trim();
       const teamCheckboxes = document.querySelectorAll('input[name="teams"]:checked');
@@ -285,75 +284,13 @@
       }
       
       if (teamCheckboxes.length === 0) {
-        showResult('Please select at least one team to notify', 'error');
+        showResult('Please select at least one channel to notify', 'error');
         return;
       }
       
       // Collect selected teams
       const selectedTeams = Array.from(teamCheckboxes).map(cb => cb.value);
       
-      // Get team mentions for Slack message
-      const teamMentions = selectedTeams.map(team => TEAM_SLACK_MENTIONS[team] || `@${team}`);
-      
       // Disable button and show loading
       button.disabled = true;
-      button.innerHTML = 'Sending... <span class="loading-indicator"></span>';
-      
-      // Prepare message data
-      const messageData = {
-        agentName: agentName,
-        agentSlackHandle: agentSlackHandle,
-        pageUrl: pageUrl,
-        updateDescription: updateDescription,
-        teams: selectedTeams,
-        teamMentions: teamMentions.join(' ')
-      };
-      
-      // Your Replit service URL
-      const serviceUrl = 'https://e62db491-0255-4031-bbd8-e584bf9c4467-00-347oxjexqfcpq.janeway.replit.dev/send-to-slack';
-      
-      // Send the request to your service
-      fetch(serviceUrl, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(messageData)
-      })
-      .then(response => response.json())
-      .then(data => {
-        if (data.success) {
-          showResult('Update notification sent successfully!', 'success');
-          // Clear form fields on success
-          document.getElementById('updateDescription').value = '';
-          // Don't clear agent or URL as they may be reused
-        } else {
-          showResult('Error: ' + (data.error || 'Failed to send notification'), 'error');
-        }
-      })
-      .catch(error => {
-        showResult('Error: ' + error.message, 'error');
-        console.error('Error:', error);
-      })
-      .finally(() => {
-        // Re-enable button
-        button.disabled = false;
-        button.innerHTML = 'Send Notification';
-      });
-    }
-    
-    function showResult(message, type) {
-      const resultDiv = document.getElementById('result');
-      resultDiv.textContent = message;
-      resultDiv.className = type;
-      resultDiv.style.display = 'block';
-      
-      if (type === 'success') {
-        setTimeout(function() {
-          resultDiv.style.display = 'none';
-        }, 5000);
-      }
-    }
-  </script>
-</body>
-</html>
+      button.innerHTML = 'Sending... <span class="loading-indicator"></span>
