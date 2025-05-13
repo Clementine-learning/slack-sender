@@ -26,6 +26,7 @@
       font-size: 14px;
     }
     button:hover { background: #611f69; }
+    button:disabled { background: #9e9e9e; cursor: not-allowed; }
     #result { 
       margin-top: 10px; 
       padding: 10px; 
@@ -35,8 +36,6 @@
     .success { background: #dff0d8; color: #3c763d; border: 1px solid #d6e9c6; }
     .error { background: #f2dede; color: #a94442; border: 1px solid #ebccd1; }
     h3 { margin-top: 0; color: #333; }
-    .loading { display: inline-block; margin-left: 5px; animation: spin 2s linear infinite; }
-    @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
   </style>
 </head>
 <body>
@@ -52,63 +51,45 @@
       var message = document.getElementById('message').value.trim();
       var resultDiv = document.getElementById('result');
       var button = document.getElementById('sendButton');
-      var originalButtonText = button.textContent;
       
       if (!message) {
         showResult('Please enter a message', 'error');
         return;
       }
       
-      // Disable button and show loading
+      // Disable button
       button.disabled = true;
-      button.innerHTML = 'Sending... <span class="loading">⟳</span>';
+      button.textContent = 'Sending...';
       
-      // Create form for sending directly to Slack
-      var form = document.createElement('form');
-      form.method = 'POST';
-      form.action = 'https://hooks.slack.com/services/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';
-      form.target = 'hidden_iframe';
-      form.style.display = 'none';
+      // Your Replit service URL
+      var serviceUrl = 'https://e62db491-0255-4031-bbd8-e584bf9c4467-00-347oxjexqfcpq.janeway.replit.dev/send-to-slack';
       
-      // Create a hidden input with the Slack payload
-      var input = document.createElement('input');
-      input.type = 'hidden';
-      input.name = 'payload';
-      input.value = JSON.stringify({ text: message });
-      
-      // Add to form and document
-      form.appendChild(input);
-      document.body.appendChild(form);
-      
-      // Create hidden iframe to prevent page navigation
-      var iframe = document.createElement('iframe');
-      iframe.name = 'hidden_iframe';
-      iframe.style.display = 'none';
-      document.body.appendChild(iframe);
-      
-      // Handle the response
-      iframe.onload = function() {
-        showResult('Message sent successfully!', 'success');
-        document.getElementById('message').value = '';
+      // Send the request to your service
+      fetch(serviceUrl, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ text: message })
+      })
+      .then(response => response.json())
+      .then(data => {
+        if (data.success) {
+          showResult('Message sent successfully!', 'success');
+          document.getElementById('message').value = '';
+        } else {
+          showResult('Error: ' + (data.error || 'Failed to send message'), 'error');
+        }
+      })
+      .catch(error => {
+        showResult('Error: ' + error.message, 'error');
+        console.error('Error:', error);
+      })
+      .finally(() => {
+        // Re-enable button
         button.disabled = false;
-        button.innerHTML = originalButtonText;
-        
-        // Clean up
-        setTimeout(function() {
-          document.body.removeChild(form);
-          document.body.removeChild(iframe);
-        }, 1000);
-      };
-      
-      // Handle errors
-      iframe.onerror = function() {
-        showResult('Error sending message. Please try again.', 'error');
-        button.disabled = false;
-        button.innerHTML = originalButtonText;
-      };
-      
-      // Submit the form
-      form.submit();
+        button.textContent = 'Send to Slack';
+      });
     }
     
     function showResult(message, type) {
