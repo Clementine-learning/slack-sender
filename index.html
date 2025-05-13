@@ -5,8 +5,174 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Knowledge Base Update Notification</title>
   <style>
-    /* Your styling here */
-    /* ... */
+    :root {
+      /* Dynamic color scheme based on user's system preference */
+      --bg-color: #ffffff;
+      --text-color: #333333;
+      --border-color: #e0e0e0;
+      --input-bg: #ffffff;
+      --primary-color: #2383e2;
+      --hover-color: #1a68b3;
+      --success-bg: #e3f1ea;
+      --success-color: #27ae60;
+      --error-bg: #fbe6e6;
+      --error-color: #eb5757;
+    }
+    
+    @media (prefers-color-scheme: dark) {
+      :root {
+        --bg-color: #1e1e1e;
+        --text-color: #e6e6e6;
+        --border-color: #4d4d4d;
+        --input-bg: #2d2d2d;
+        --primary-color: #3a97f0;
+        --hover-color: #5cabf2;
+        --success-bg: #1e3a2b;
+        --success-color: #4dd486;
+        --error-bg: #3b1d1d;
+        --error-color: #ff7878;
+      }
+    }
+    
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif;
+      line-height: 1.5;
+      color: var(--text-color);
+      background: var(--bg-color);
+      margin: 0;
+      padding: 16px;
+      transition: background-color 0.3s, color 0.3s;
+    }
+    
+    .notification-form {
+      max-width: 100%;
+      padding: 20px;
+      border-radius: 8px;
+      border: 1px solid var(--border-color);
+      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+    }
+    
+    .form-title {
+      font-size: 18px;
+      font-weight: 600;
+      margin-bottom: 20px;
+      padding-bottom: 10px;
+      border-bottom: 1px solid var(--border-color);
+    }
+    
+    .form-group {
+      margin-bottom: 20px;
+    }
+    
+    label {
+      display: block;
+      font-size: 14px;
+      font-weight: 500;
+      margin-bottom: 8px;
+    }
+    
+    select, input[type="url"], input[type="text"], textarea {
+      width: 100%;
+      padding: 10px 12px;
+      border: 1px solid var(--border-color);
+      border-radius: 6px;
+      font-size: 14px;
+      box-sizing: border-box;
+      background: var(--input-bg);
+      color: var(--text-color);
+      transition: border-color 0.3s;
+    }
+    
+    select:focus, input:focus, textarea:focus {
+      outline: none;
+      border-color: var(--primary-color);
+      box-shadow: 0 0 0 2px rgba(35, 131, 226, 0.2);
+    }
+    
+    textarea {
+      min-height: 120px;
+      resize: vertical;
+    }
+    
+    .label-helper {
+      display: block;
+      font-size: 12px;
+      color: var(--text-color);
+      opacity: 0.7;
+      margin-top: 4px;
+    }
+    
+    .channel-options {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 16px;
+      margin-top: 8px;
+    }
+    
+    .channel-option {
+      display: flex;
+      align-items: center;
+    }
+    
+    .channel-option input {
+      margin-right: 8px;
+    }
+    
+    button {
+      background: var(--primary-color);
+      color: white;
+      border: none;
+      border-radius: 6px;
+      padding: 10px 16px;
+      font-size: 14px;
+      font-weight: 500;
+      cursor: pointer;
+      transition: background-color 0.2s;
+    }
+    
+    button:hover {
+      background: var(--hover-color);
+    }
+    
+    button:disabled {
+      background: var(--border-color);
+      cursor: not-allowed;
+    }
+    
+    #result {
+      margin-top: 16px;
+      padding: 12px;
+      border-radius: 6px;
+      font-size: 14px;
+      display: none;
+    }
+    
+    .success {
+      background: var(--success-bg);
+      color: var(--success-color);
+      border: 1px solid var(--success-color);
+    }
+    
+    .error {
+      background: var(--error-bg);
+      color: var(--error-color);
+      border: 1px solid var(--error-color);
+    }
+    
+    .loading-indicator {
+      display: inline-block;
+      width: 12px;
+      height: 12px;
+      border: 2px solid rgba(255,255,255,0.3);
+      border-radius: 50%;
+      border-top-color: white;
+      animation: spin 1s ease-in-out infinite;
+      margin-left: 8px;
+    }
+    
+    @keyframes spin {
+      to { transform: rotate(360deg); }
+    }
   </style>
 </head>
 <body>
@@ -14,32 +180,48 @@
     <div class="form-title">Knowledge Base Update Notification</div>
     
     <div class="form-group">
+      <label for="agentName">Who is responsible for this update?</label>
+      <select id="agentName" required>
+        <option value="">-- Select an agent --</option>
+        <option value="Anna">Anna</option>
+        <option value="Bob">Bob</option>
+        <option value="Carlos">Carlos</option>
+        <option value="Diana">Diana</option>
+        <option value="Elena">Elena</option>
+        <!-- Add more agents as needed -->
+      </select>
+      <span class="label-helper">Select your name from the list</span>
+    </div>
+    
+    <div class="form-group">
       <label for="pageUrl">Link to updated page or block:</label>
       <input type="url" id="pageUrl" placeholder="https://notion.so/..." required>
+      <span class="label-helper">Paste the direct link to the updated content</span>
     </div>
     
     <div class="form-group">
-      <label for="updaterName">Your Name:</label>
-      <input type="text" id="updaterName" placeholder="Enter your name" required>
-    </div>
-    
-    <div class="form-group">
-      <label>Notify in channel:</label>
+      <label>Notify these teams:</label>
       <div class="channel-options">
         <div class="channel-option">
-          <input type="checkbox" id="channel1" name="channels" value="support" checked>
-          <label for="channel1">Support Team</label>
+          <input type="checkbox" id="teamSupport" name="teams" value="support" checked>
+          <label for="teamSupport">Support Team</label>
         </div>
         <div class="channel-option">
-          <input type="checkbox" id="channel2" name="channels" value="general">
-          <label for="channel2">General</label>
+          <input type="checkbox" id="teamProduct" name="teams" value="product">
+          <label for="teamProduct">Product Team</label>
+        </div>
+        <div class="channel-option">
+          <input type="checkbox" id="teamEngineering" name="teams" value="engineering">
+          <label for="teamEngineering">Engineering</label>
         </div>
       </div>
+      <span class="label-helper">Select all teams that should be notified about this update</span>
     </div>
     
     <div class="form-group">
       <label for="updateDescription">What changed? (please provide context)</label>
-      <textarea id="updateDescription" placeholder="Describe what was updated..." required></textarea>
+      <textarea id="updateDescription" placeholder="Describe what was updated and why it's important..." required></textarea>
+      <span class="label-helper">Be specific and clear about what changed and why it matters</span>
     </div>
     
     <button id="sendButton" onclick="sendNotification()">Send Notification</button>
@@ -47,6 +229,23 @@
   </div>
 
   <script>
+    // Map of agents to their Slack handles
+    const AGENT_SLACK_HANDLES = {
+      'Anna': '@anna.smith',
+      'Bob': '@bob.jones',
+      'Carlos': '@carlos',
+      'Diana': '@diana.miller',
+      'Elena': '@elena'
+      // Add more mappings as needed
+    };
+    
+    // Map of teams to their Slack mentions
+    const TEAM_SLACK_MENTIONS = {
+      'support': '@support-team',
+      'product': '@product-team',
+      'engineering': '@engineering-team'
+    };
+    
     // Check for URL parameters on page load
     document.addEventListener('DOMContentLoaded', function() {
       const urlParams = new URLSearchParams(window.location.search);
@@ -59,21 +258,24 @@
     });
     
     function sendNotification() {
+      const agentSelect = document.getElementById('agentName');
+      const agentName = agentSelect.value;
+      const agentSlackHandle = AGENT_SLACK_HANDLES[agentName] || agentName;
+      
       const pageUrl = document.getElementById('pageUrl').value.trim();
       const updateDescription = document.getElementById('updateDescription').value.trim();
-      const updaterName = document.getElementById('updaterName').value.trim();
-      const channelCheckboxes = document.querySelectorAll('input[name="channels"]:checked');
+      const teamCheckboxes = document.querySelectorAll('input[name="teams"]:checked');
       const resultDiv = document.getElementById('result');
       const button = document.getElementById('sendButton');
       
       // Validate inputs
-      if (!pageUrl) {
-        showResult('Please provide a link to the updated page or block', 'error');
+      if (!agentName) {
+        showResult('Please select who is responsible for this update', 'error');
         return;
       }
       
-      if (!updaterName) {
-        showResult('Please enter your name', 'error');
+      if (!pageUrl) {
+        showResult('Please provide a link to the updated page or block', 'error');
         return;
       }
       
@@ -82,13 +284,16 @@
         return;
       }
       
-      if (channelCheckboxes.length === 0) {
-        showResult('Please select at least one channel', 'error');
+      if (teamCheckboxes.length === 0) {
+        showResult('Please select at least one team to notify', 'error');
         return;
       }
       
-      // Collect selected channels
-      const selectedChannels = Array.from(channelCheckboxes).map(cb => cb.value);
+      // Collect selected teams
+      const selectedTeams = Array.from(teamCheckboxes).map(cb => cb.value);
+      
+      // Get team mentions for Slack message
+      const teamMentions = selectedTeams.map(team => TEAM_SLACK_MENTIONS[team] || `@${team}`);
       
       // Disable button and show loading
       button.disabled = true;
@@ -96,13 +301,15 @@
       
       // Prepare message data
       const messageData = {
+        agentName: agentName,
+        agentSlackHandle: agentSlackHandle,
         pageUrl: pageUrl,
         updateDescription: updateDescription,
-        channels: selectedChannels,
-        updaterName: updaterName
+        teams: selectedTeams,
+        teamMentions: teamMentions.join(' ')
       };
       
-      // Your Replit service URL (no Slack URLs here!)
+      // Your Replit service URL
       const serviceUrl = 'https://e62db491-0255-4031-bbd8-e584bf9c4467-00-347oxjexqfcpq.janeway.replit.dev/send-to-slack';
       
       // Send the request to your service
@@ -119,7 +326,7 @@
           showResult('Update notification sent successfully!', 'success');
           // Clear form fields on success
           document.getElementById('updateDescription').value = '';
-          // Don't clear URL and name as they may be reused
+          // Don't clear agent or URL as they may be reused
         } else {
           showResult('Error: ' + (data.error || 'Failed to send notification'), 'error');
         }
