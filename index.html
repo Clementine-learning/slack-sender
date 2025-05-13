@@ -5,27 +5,339 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Knowledge Base Update Notification</title>
   <style>
-    /* Same styling as before */
-    /* ... */
+    /* Base styles that work for both light and dark modes */
+    :root {
+      --bg-color: #ffffff;
+      --text-color: #333333;
+      --border-color: #e0e0e0;
+      --input-bg: #ffffff;
+      --primary-color: #2383e2;
+      --hover-color: #1a68b3;
+      --success-bg: #e3f1ea;
+      --success-color: #27ae60;
+      --error-bg: #fbe6e6;
+      --error-color: #eb5757;
+      --font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif;
+      --box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+    }
+    
+    /* Dark mode specific variables */
+    @media (prefers-color-scheme: dark) {
+      :root {
+        --bg-color: #1e1e1e;
+        --text-color: #e6e6e6;
+        --border-color: #444;
+        --input-bg: #2d2d2d;
+        --primary-color: #3a97f0;
+        --hover-color: #5cabf2;
+        --success-bg: #1e3a2b;
+        --success-color: #4dd486;
+        --error-bg: #3b1d1d;
+        --error-color: #ff7878;
+        --box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
+      }
+    }
+    
+    /* Force dark mode for Notion embedding */
+    .dark-mode {
+      --bg-color: #1e1e1e;
+      --text-color: #e6e6e6;
+      --border-color: #444;
+      --input-bg: #2d2d2d;
+      --primary-color: #3a97f0;
+      --hover-color: #5cabf2;
+      --success-bg: #1e3a2b;
+      --success-color: #4dd486;
+      --error-bg: #3b1d1d;
+      --error-color: #ff7878;
+      --box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
+    }
+    
+    body {
+      font-family: var(--font-family);
+      line-height: 1.6;
+      color: var(--text-color);
+      background-color: var(--bg-color);
+      margin: 0;
+      padding: 20px;
+      font-size: 16px;
+    }
+    
+    /* Main form container */
+    .notification-form {
+      max-width: 800px;
+      margin: 0 auto;
+      padding: 25px;
+      border-radius: 8px;
+      border: 1px solid var(--border-color);
+      background-color: var(--bg-color);
+      box-shadow: var(--box-shadow);
+    }
+    
+    /* Form title */
+    .form-title {
+      font-size: 24px;
+      font-weight: 600;
+      margin-bottom: 25px;
+      padding-bottom: 15px;
+      border-bottom: 1px solid var(--border-color);
+      color: var(--text-color);
+    }
+    
+    /* Form groups */
+    .form-group {
+      margin-bottom: 25px;
+    }
+    
+    /* Labels */
+    label {
+      display: block;
+      font-size: 18px;
+      font-weight: 500;
+      margin-bottom: 10px;
+      color: var(--text-color);
+    }
+    
+    /* Helper text */
+    .label-helper {
+      display: block;
+      font-size: 14px;
+      color: var(--text-color);
+      opacity: 0.7;
+      margin-top: 6px;
+    }
+    
+    /* Form inputs */
+    select, input[type="url"], input[type="text"], textarea {
+      width: 100%;
+      padding: 12px 15px;
+      border: 1px solid var(--border-color);
+      border-radius: 6px;
+      font-size: 16px;
+      box-sizing: border-box;
+      background-color: var(--input-bg);
+      color: var(--text-color);
+      transition: border-color 0.3s;
+      font-family: var(--font-family);
+    }
+    
+    /* Focus states */
+    select:focus, input:focus, textarea:focus {
+      outline: none;
+      border-color: var(--primary-color);
+      box-shadow: 0 0 0 2px rgba(58, 151, 240, 0.2);
+    }
+    
+    /* Textarea specifics */
+    textarea {
+      min-height: 120px;
+      resize: vertical;
+    }
+    
+    /* Checkboxes container */
+    .team-options {
+      margin-top: 12px;
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+      gap: 12px;
+    }
+    
+    /* Individual checkbox option */
+    .team-option {
+      display: flex;
+      align-items: flex-start;
+      margin-bottom: 8px;
+    }
+    
+    .team-option input[type="checkbox"] {
+      margin-right: 10px;
+      margin-top: 3px;
+      transform: scale(1.2);
+    }
+    
+    .team-option label {
+      font-size: 16px;
+      font-weight: normal;
+      margin-bottom: 0;
+      display: flex;
+      flex-direction: column;
+    }
+    
+    .team-description {
+      font-size: 12px;
+      color: var(--text-color);
+      opacity: 0.7;
+      margin-top: 2px;
+    }
+    
+    /* Button */
+    button {
+      background-color: var(--primary-color);
+      color: white;
+      border: none;
+      border-radius: 6px;
+      padding: 12px 20px;
+      font-size: 16px;
+      font-weight: 500;
+      cursor: pointer;
+      transition: background-color 0.2s;
+    }
+    
+    button:hover {
+      background-color: var(--hover-color);
+    }
+    
+    button:disabled {
+      background-color: var(--border-color);
+      cursor: not-allowed;
+    }
+    
+    /* Result messages */
+    #result {
+      margin-top: 20px;
+      padding: 15px;
+      border-radius: 6px;
+      font-size: 16px;
+      display: none;
+    }
+    
+    .success {
+      background-color: var(--success-bg);
+      color: var(--success-color);
+      border: 1px solid var(--success-color);
+    }
+    
+    .error {
+      background-color: var(--error-bg);
+      color: var(--error-color);
+      border: 1px solid var(--error-color);
+    }
+    
+    /* Loading states */
+    .loading-indicator {
+      display: inline-block;
+      width: 14px;
+      height: 14px;
+      border: 2px solid rgba(255,255,255,0.3);
+      border-radius: 50%;
+      border-top-color: white;
+      animation: spin 1s ease-in-out infinite;
+      margin-left: 8px;
+    }
+    
+    @keyframes spin {
+      to { transform: rotate(360deg); }
+    }
+    
+    /* Loading screen */
+    #loadingScreen {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background-color: rgba(0,0,0,0.7);
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      z-index: 1000;
+      color: white;
+      font-size: 20px;
+    }
+    
+    /* Error screen */
+    #errorScreen {
+      display: none;
+      text-align: center;
+      margin-top: 50px;
+      color: var(--error-color);
+    }
+    
+    /* Mode toggle switch */
+    .mode-toggle {
+      position: absolute;
+      top: 20px;
+      right: 20px;
+      display: flex;
+      align-items: center;
+    }
+    
+    .mode-toggle label {
+      margin-right: 10px;
+      font-size: 14px;
+    }
+    
+    .switch {
+      position: relative;
+      display: inline-block;
+      width: 60px;
+      height: 34px;
+    }
+    
+    .switch input {
+      opacity: 0;
+      width: 0;
+      height: 0;
+    }
+    
+    .slider {
+      position: absolute;
+      cursor: pointer;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      background-color: #ccc;
+      transition: .4s;
+      border-radius: 34px;
+    }
+    
+    .slider:before {
+      position: absolute;
+      content: "";
+      height: 26px;
+      width: 26px;
+      left: 4px;
+      bottom: 4px;
+      background-color: white;
+      transition: .4s;
+      border-radius: 50%;
+    }
+    
+    input:checked + .slider {
+      background-color: var(--primary-color);
+    }
+    
+    input:checked + .slider:before {
+      transform: translateX(26px);
+    }
   </style>
 </head>
-<body>
-  <!-- Loading screen -->
-  <div id="loadingScreen" style="position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.7); display: flex; justify-content: center; align-items: center; z-index: 1000; color: white; font-size: 20px;">
-    Loading configuration...
+<body id="body">
+  <!-- Dark mode toggle -->
+  <div class="mode-toggle">
+    <label for="darkModeToggle">Dark Mode</label>
+    <label class="switch">
+      <input type="checkbox" id="darkModeToggle" checked>
+      <span class="slider"></span>
+    </label>
   </div>
 
+  <!-- Loading screen -->
+  <div id="loadingScreen">
+    <span>Loading configuration...</span>
+  </div>
+
+  <!-- Main form -->
   <div class="notification-form" style="display: none;" id="formContainer">
     <div class="form-title">Knowledge Base Update Notification</div>
     
     <div class="form-group">
       <label for="agentName">Who is responsible for this update?</label>
-      <div class="select-container">
-        <select id="agentName" required>
-          <option value="">-- Select an agent --</option>
-          <!-- Agent options will be loaded from the server -->
-        </select>
-      </div>
+      <select id="agentName" required>
+        <option value="">-- Select an agent --</option>
+        <!-- Agent options will be loaded from the server -->
+      </select>
       <span class="label-helper">Select your name from the list</span>
     </div>
     
@@ -37,15 +349,8 @@
     
     <div class="form-group">
       <label>Send notification to:</label>
-      <div class="channel-options">
-        <div class="channel-option">
-          <input type="checkbox" id="teamSupportUpdates" name="teams" value="support-updates" checked>
-          <label for="teamSupportUpdates">Support Updates</label>
-        </div>
-        <div class="channel-option">
-          <input type="checkbox" id="teamOutstaffSupport" name="teams" value="outstaff-support">
-          <label for="teamOutstaffSupport">Outstaff Support</label>
-        </div>
+      <div class="team-options" id="teamOptions">
+        <!-- Team options will be loaded dynamically -->
       </div>
       <span class="label-helper">Select where to send this notification</span>
     </div>
@@ -61,7 +366,7 @@
   </div>
 
   <!-- Error screen -->
-  <div id="errorScreen" style="display: none; text-align: center; margin-top: 50px; color: #eb5757;">
+  <div id="errorScreen">
     <h2>Configuration Error</h2>
     <p id="errorMessage">Unable to load configuration. Please try refreshing the page.</p>
     <button onclick="location.reload()">Refresh Page</button>
@@ -74,17 +379,30 @@
     // List of possible API endpoints to try - we only need one to work
     // This list should be ordered from most preferred to least preferred
     const POSSIBLE_API_ENDPOINTS = [
-      // Primary endpoint
+      // Primary endpoint - replace with your actual Replit URL
       "https://e62db491-0255-4031-bbd8-e584bf9c4467-00-347oxjexqfcpq.janeway.replit.dev",
-      // Backup endpoint if primary is unreachable
+      // Backup endpoint if primary is unreachable - replace with your backup URL if available
       "https://slack-sender-service.clementine-top.repl.co"
     ];
     
     // Global configuration object
     let CONFIG = {
       apiUrl: null,
-      initialized: false
+      initialized: false,
+      teamConfig: []
     };
+    
+    // Set dark mode by default - since Notion is usually in dark mode
+    document.getElementById('body').classList.add('dark-mode');
+    
+    // Dark mode toggle functionality
+    document.getElementById('darkModeToggle').addEventListener('change', function(event) {
+      if (event.target.checked) {
+        document.getElementById('body').classList.add('dark-mode');
+      } else {
+        document.getElementById('body').classList.remove('dark-mode');
+      }
+    });
     
     // Bootstrap the application
     function bootstrap() {
@@ -125,6 +443,22 @@
             // Endpoint is reachable, store it as our API URL
             CONFIG.apiUrl = endpoint;
             console.log(`Using API endpoint: ${endpoint}`);
+            
+            // Try to load team configuration
+            try {
+              const teamsResponse = await fetch(`${endpoint}/teams-config`);
+              if (teamsResponse.ok) {
+                const teamsData = await teamsResponse.json();
+                if (teamsData.teams && Array.isArray(teamsData.teams)) {
+                  CONFIG.teamConfig = teamsData.teams;
+                  console.log(`Loaded ${teamsData.teams.length} team configurations`);
+                }
+              }
+            } catch (teamError) {
+              console.warn("Could not load team configuration:", teamError);
+              // Continue anyway, we'll use defaults
+            }
+            
             return;
           }
         } catch (error) {
@@ -151,16 +485,59 @@
         document.getElementById('pageUrl').value = decodeURIComponent(pageParam);
       }
       
+      // Populate team options
+      populateTeamOptions();
+      
       // Load agents
       loadAgents();
+    }
+    
+    // Populate team options based on configuration
+    function populateTeamOptions() {
+      const teamOptionsContainer = document.getElementById('teamOptions');
+      teamOptionsContainer.innerHTML = ''; // Clear existing options
+      
+      // Use team config if available, otherwise fallback to default options
+      const teamsToDisplay = CONFIG.teamConfig.length > 0 ? CONFIG.teamConfig : [
+        { id: 'support-tribe', name: 'Support Tribe', description: 'For the entire support team' },
+        { id: 'headway-support-team', name: 'Headway Support', description: 'For people working mainly with Headway App' },
+        { id: 'support-updates', name: 'Support Updates', description: 'General support updates channel' }
+      ];
+      
+      teamsToDisplay.forEach(team => {
+        const teamOption = document.createElement('div');
+        teamOption.className = 'team-option';
+        
+        const checkbox = document.createElement('input');
+        checkbox.type = 'checkbox';
+        checkbox.id = `team-${team.id}`;
+        checkbox.name = 'teams';
+        checkbox.value = team.id;
+        // Check the first option by default
+        if (team.id === teamsToDisplay[0].id) {
+          checkbox.checked = true;
+        }
+        
+        const label = document.createElement('label');
+        label.htmlFor = `team-${team.id}`;
+        label.textContent = team.name;
+        
+        if (team.description) {
+          const description = document.createElement('span');
+          description.className = 'team-description';
+          description.textContent = team.description;
+          label.appendChild(description);
+        }
+        
+        teamOption.appendChild(checkbox);
+        teamOption.appendChild(label);
+        teamOptionsContainer.appendChild(teamOption);
+      });
     }
     
     // Load agents from the server
     function loadAgents() {
       console.log("Loading agents...");
-      
-      const selectContainer = document.querySelector('.select-container');
-      selectContainer.classList.add('select-loading');
       
       fetch(`${CONFIG.apiUrl}/agents`)
         .then(response => {
@@ -194,11 +571,53 @@
         .catch(error => {
           console.error('Error loading agents:', error);
           showResult('Unable to load agent list. Please refresh the page or contact support.', 'error');
-        })
-        .finally(() => {
-          // Remove loading state
-          selectContainer.classList.remove('select-loading');
         });
+    }
+    
+    // Extract page name from Notion URL
+    function extractPageNameFromUrl(url) {
+      try {
+        // Try to extract page name from URL
+        const urlObj = new URL(url);
+        
+        // Check if it's a Notion URL
+        if (urlObj.hostname.includes('notion.so')) {
+          // Get the pathname
+          const path = urlObj.pathname;
+          
+          // For URL format like: https://www.notion.so/makeheadway/Zendesk-1d116bdf9fd280a68138e64725a967e1
+          // We want to extract "Zendesk"
+          const makeheadwayMatch = path.match(/\/makeheadway\/([^-]+)-[a-f0-9]+/);
+          if (makeheadwayMatch && makeheadwayMatch[1]) {
+            return decodeURIComponent(makeheadwayMatch[1]);
+          }
+          
+          // Format 1: /workspace/Page-Name-1a2b3c...
+          const workspaceMatch = path.match(/\/[^/]+\/([^/-]+)(?:-[a-f0-9]+)?$/);
+          if (workspaceMatch && workspaceMatch[1]) {
+            return decodeURIComponent(workspaceMatch[1].replace(/-/g, ' '));
+          }
+          
+          // Format 2: /Page-Name-1a2b3c...
+          const simpleMatch = path.match(/\/([^/-]+)(?:-[a-f0-9]+)?$/);
+          if (simpleMatch && simpleMatch[1]) {
+            return decodeURIComponent(simpleMatch[1].replace(/-/g, ' '));
+          }
+          
+          // If we have a hash fragment with a page name
+          if (urlObj.hash) {
+            const hashMatch = urlObj.hash.match(/#([^-]+)(?:-[a-f0-9]+)?$/);
+            if (hashMatch && hashMatch[1]) {
+              return decodeURIComponent(hashMatch[1].replace(/-/g, ' '));
+            }
+          }
+        }
+      } catch (e) {
+        console.warn('Error extracting page name:', e);
+      }
+      
+      // Fallback: return "this Notion page"
+      return "this Notion page";
     }
     
     function sendNotification() {
@@ -229,6 +648,9 @@
         return;
       }
       
+      // Extract page name for the message
+      const pageName = extractPageNameFromUrl(pageUrl);
+      
       // Collect selected teams
       const selectedTeams = Array.from(teamCheckboxes).map(cb => cb.value);
       
@@ -240,6 +662,7 @@
       const messageData = {
         agentName: agentName,
         pageUrl: pageUrl,
+        pageName: pageName,
         updateDescription: updateDescription,
         teams: selectedTeams
       };
