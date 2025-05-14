@@ -437,14 +437,12 @@ function bootstrap() {
   loadConfiguration()
     .then(() => {
       // Configuration loaded successfully
-      document.getElementById('loadingScreen').style.display = 'none';
-      document.getElementById('formContainer').style.display = 'block';
-      
-      // Load agents FIRST before initializing the form
-      return loadAgents();
+      return loadAgents(); // Load agents first and return the promise
     })
     .then(() => {
-      // Now that agents are loaded, initialize the form
+      // Now that agents are loaded, show form and initialize
+      document.getElementById('loadingScreen').style.display = 'none';
+      document.getElementById('formContainer').style.display = 'block';
       initializeForm();
     })
     .catch(error => {
@@ -521,11 +519,13 @@ function bootstrap() {
   // Populate team options
   populateTeamOptions();
   
-  // Setup agent search functionality
-  // Note: We removed loadAgents() from here since we're calling it before initializeForm()
+  // DO NOT load agents here as we already loaded them in bootstrap
+  // loadAgents(); <- REMOVE THIS LINE
+  
+  // Set up agent search functionality
   setupAgentSearch();
   
-  // If we have agents already loaded, populate the dropdown
+  // Make sure the agent dropdown is populated with our loaded agents
   if (CONFIG.agents && CONFIG.agents.length > 0) {
     populateAgentDropdown(CONFIG.agents);
   }
@@ -739,19 +739,19 @@ function bootstrap() {
   // Load agents from the server
   function loadAgents() {
   console.log("Loading agents...");
-  console.log("API URL being used:", CONFIG.apiUrl); // For debugging
+  console.log("API URL being used:", CONFIG.apiUrl);
   
   return new Promise((resolve, reject) => {
     fetch(`${CONFIG.apiUrl}/agents`)
       .then(response => {
-        console.log("Agent response status:", response.status); // For debugging
+        console.log("Agent response status:", response.status);
         if (!response.ok) {
           throw new Error(`Server error: ${response.status}`);
         }
         return response.json();
       })
       .then(data => {
-        console.log("Agent data received:", data); // For debugging
+        console.log("Agent data received:", data);
         
         if (!data.agents || !Array.isArray(data.agents)) {
           throw new Error('Invalid response format');
@@ -776,8 +776,8 @@ function bootstrap() {
           });
         }
         
-        console.log(`Loaded ${data.agents.length} agents`);
-        resolve(); // Resolve the promise when done
+        console.log(`Loaded ${data.agents.length} agents:`, data.agents);
+        resolve(); // Resolve the promise
       })
       .catch(error => {
         console.error('Error loading agents:', error);
