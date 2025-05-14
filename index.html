@@ -432,24 +432,30 @@
   };
   
   // Bootstrap the application
-  function bootstrap() {
-    console.log("Bootstrapping application...");
-    loadConfiguration()
-      .then(() => {
-        // Configuration loaded successfully
-        document.getElementById('loadingScreen').style.display = 'none';
-        document.getElementById('formContainer').style.display = 'block';
-        initializeForm();
-      })
-      .catch(error => {
-        // Failed to load configuration
-        document.getElementById('loadingScreen').style.display = 'none';
-        document.getElementById('errorScreen').style.display = 'block';
-        document.getElementById('errorMessage').textContent = 
-          `Unable to load configuration: ${error.message}. Please contact support.`;
-        console.error("Bootstrap error:", error);
-      });
-  }
+function bootstrap() {
+  console.log("Bootstrapping application...");
+  loadConfiguration()
+    .then(() => {
+      // Configuration loaded successfully
+      document.getElementById('loadingScreen').style.display = 'none';
+      document.getElementById('formContainer').style.display = 'block';
+      
+      // Load agents FIRST before initializing the form
+      return loadAgents();
+    })
+    .then(() => {
+      // Now that agents are loaded, initialize the form
+      initializeForm();
+    })
+    .catch(error => {
+      // Failed to load configuration or agents
+      document.getElementById('loadingScreen').style.display = 'none';
+      document.getElementById('errorScreen').style.display = 'block';
+      document.getElementById('errorMessage').textContent = 
+        `Unable to load configuration: ${error.message}. Please contact support.`;
+      console.error("Bootstrap error:", error);
+    });
+}
   
   // Try to load configuration from any of the possible endpoints
   async function loadConfiguration() {
@@ -501,26 +507,29 @@
   
   // Initialize the form
   function initializeForm() {
-    console.log("Initializing form...");
-    
-    // Load URL parameters
-    const urlParams = new URLSearchParams(window.location.search);
-    const pageParam = urlParams.get('page');
-    
-    // Pre-fill the page URL if provided
-    if (pageParam) {
-      document.getElementById('pageUrl').value = decodeURIComponent(pageParam);
-    }
-    
-    // Populate team options
-    populateTeamOptions();
-    
-    // Load agents
-    loadAgents();
-    
-    // Set up agent search functionality
-    setupAgentSearch();
+  console.log("Initializing form...");
+  
+  // Load URL parameters
+  const urlParams = new URLSearchParams(window.location.search);
+  const pageParam = urlParams.get('page');
+  
+  // Pre-fill the page URL if provided
+  if (pageParam) {
+    document.getElementById('pageUrl').value = decodeURIComponent(pageParam);
   }
+  
+  // Populate team options
+  populateTeamOptions();
+  
+  // Setup agent search functionality
+  // Note: We removed loadAgents() from here since we're calling it before initializeForm()
+  setupAgentSearch();
+  
+  // If we have agents already loaded, populate the dropdown
+  if (CONFIG.agents && CONFIG.agents.length > 0) {
+    populateAgentDropdown(CONFIG.agents);
+  }
+}
   
   function showResult(message, type) {
     const resultDiv = document.getElementById('result');
@@ -729,16 +738,21 @@
   
   // Load agents from the server
   function loadAgents() {
-    console.log("Loading agents...");
-    
+  console.log("Loading agents...");
+  console.log("API URL being used:", CONFIG.apiUrl); // For debugging
+  
+  return new Promise((resolve, reject) => {
     fetch(`${CONFIG.apiUrl}/agents`)
       .then(response => {
+        console.log("Agent response status:", response.status); // For debugging
         if (!response.ok) {
           throw new Error(`Server error: ${response.status}`);
         }
         return response.json();
       })
       .then(data => {
+        console.log("Agent data received:", data); // For debugging
+        
         if (!data.agents || !Array.isArray(data.agents)) {
           throw new Error('Invalid response format');
         }
@@ -747,22 +761,23 @@
         CONFIG.agents = data.agents;
         
         const agentSelect = document.getElementById('agentName');
-        if (!agentSelect) return;
-        
-        // Clear any existing options except the first one
-        while (agentSelect.options.length > 1) {
-          agentSelect.remove(1);
+        if (agentSelect) {
+          // Clear any existing options except the first one
+          while (agentSelect.options.length > 1) {
+            agentSelect.remove(1);
+          }
+          
+          // Add agent options to the hidden select
+          data.agents.forEach(agent => {
+            const option = document.createElement('option');
+            option.value = agent;
+            option.textContent = agent;
+            agentSelect.appendChild(option);
+          });
         }
         
-        // Add agent options to the hidden select
-        data.agents.forEach(agent => {
-          const option = document.createElement('option');
-          option.value = agent;
-          option.textContent = agent;
-          agentSelect.appendChild(option);
-        });
-        
         console.log(`Loaded ${data.agents.length} agents`);
+        resolve(); // Resolve the promise when done
       })
       .catch(error => {
         console.error('Error loading agents:', error);
@@ -771,8 +786,10 @@
         // Fall back to a default list of agents
         CONFIG.agents = ['Jane Doe', 'John Smith', 'Alex Johnson', 'Sam Wilson', 'Taylor Brown'];
         populateAgentDropdown(CONFIG.agents);
+        resolve(); // Resolve even on error to continue app flow
       });
-  }
+  });
+}
 </script>
 
 <!-- TEXT FORMATTING FUNCTIONS -->
